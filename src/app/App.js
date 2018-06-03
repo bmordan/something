@@ -4,9 +4,11 @@ import { concat } from 'ramda'
 import InputBox from './InputBox'
 import ChatPane from './ChatPane'
 import Timer from './Timer'
+import Auth from './Auth'
 
 const bot = new RiveScript()
 const user = 'temp_user'
+const auth = new Auth()
 
 class App extends React.Component {
   constructor () {
@@ -14,15 +16,17 @@ class App extends React.Component {
 
     this.state = {
       conversation: [],
-      timer: false
+      timer: false,
+      user: null
     }
 
     bot.loadFile([
       'begin.rive',
       'main.rive'
     ], () => {
+      const welcome = !this.state.user ? 'I don\'t know who you are' : 'Ok - I\'m Ready'
       const conversation = [
-        {text: 'Ok - I\'m Ready', actor: 'bot'},
+        {text: welcome, actor: 'bot'},
       ]
 
       bot.sortReplies()
@@ -30,16 +34,20 @@ class App extends React.Component {
     })
   }
 
-  onTimerFinish = (timeInfo) => {
-    this.setState({
-      time: false,
-      conversation: concat(this.state.conversation, [{text: `logged ${timeInfo} session`, actor: 'bot'}])
-    })
+  onLogin = () => {
+    auth.login()
   }
 
   onSetTimer = (rivescriptContext) => {
     const {mins, secs} = rivescriptContext[user]
     this.setState({time: {m: mins, s: secs}})
+  }
+
+  onTimerFinish = (timeInfo) => {
+    this.setState({
+      time: false,
+      conversation: concat(this.state.conversation, [{text: `logged ${timeInfo} session`, actor: 'bot'}])
+    })
   }
 
   onUserInput = (value) => {

@@ -7,6 +7,9 @@
 + timer
 - _set_timer<call>_set_timer</call>
 
++ login
+- <call>_login</call>
+
 + set [a] (time|timer)
 * <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
 * <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
@@ -31,4 +34,8 @@
 
 > object _set_timer javascript
   this.onSetTimer(arguments[0]._users)
+< object
+
+> object _login javascript
+  this.onLogin()
 < object

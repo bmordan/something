@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "auth0-js": "^9.6.0",
+    "hapi": "^17.5.1",
+    "history": "^4.7.2",
     "ramda": "^0.25.0",
     "react": "^16.4.0",
     "react-dom": "^16.4.0",
     "react-scripts": "1.1.4",
     "redux-bundler": "^21.2.1",
     "rivescript": "^1.19.0",
-    "simple-countdown": "^1.2.0"
+    "simple-countdown": "^1.2.0",
+    "simple-react-router": "0.0.17"
   },
   "scripts": {
     "start": "react-scripts start",
