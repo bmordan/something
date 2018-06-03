@@ -1,0 +1,34 @@
+! version = 2.0
+
++ (hello|hi|ok|lets go)
+- Hello, Bernard!
+- Hi there
+
++ timer
+- _set_timer<call>_set_timer</call>
+
++ set [a] (time|timer)
+* <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
+* <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
+- you have a timer for <get mins> mins and <get secs> seconds
+
+> topic less_than_sixty_minutes
+  + #
+  * <star> < 60 => <set mins=<star>>for how many seconds?{topic=less_than_sixty_seconds}
+  - sorry, it has to be less than 60 minutes
+< less_than_sixty_minutes
+
+> topic less_than_sixty_seconds
+  + #
+  * <star> < 60 => <set secs=<star>><call>_set_timer</call>meditation session{topic=random}
+  - oh, it has to be less than 60 seconds -> try again
+< topic
+
++ *
+- sorry don't understand that
+- does not compute
+- nothing to say to that
+
+> object _set_timer javascript
+  this.onSetTimer(arguments[0]._users)
+< object
