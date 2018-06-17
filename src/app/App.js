@@ -4,29 +4,44 @@ import { concat } from 'ramda'
 import InputBox from './InputBox'
 import ChatPane from './ChatPane'
 import Timer from './Timer'
-import Auth from './Auth'
+import { connect } from 'redux-bundler-react'
+import auth from '../lib/auth'
+import createHistory from 'history/createBrowserHistory'
 
+const history = createHistory()
 const bot = new RiveScript()
 const user = 'temp_user'
-const auth = new Auth()
 
 class App extends React.Component {
-  constructor () {
-    super()
+  constructor (props) {
+    super(props)
 
     this.state = {
+      welcome: props.userState.user ? `Hi ${props.userState.user.name}` : `I don't know who you are`,
       conversation: [],
-      timer: false,
-      user: null
+      timer: false
     }
+
+    auth.parseHash((err, authResult) => {
+      if (authResult && authResult.idTokenPayload) {
+
+        const {idTokenPayload: { sub: userId }} = authResult
+
+        props.doSetAuthToken({userId})
+        history.push('/')
+      } else if (err) {
+        history.push('/error')
+        console.error(err)
+      }
+    })
 
     bot.loadFile([
       'begin.rive',
       'main.rive'
     ], () => {
-      const welcome = !this.state.user ? 'I don\'t know who you are' : 'Ok - I\'m Ready'
+
       const conversation = [
-        {text: welcome, actor: 'bot'},
+        {text: this.state.welcome, actor: 'bot'},
       ]
 
       bot.sortReplies()
@@ -34,9 +49,7 @@ class App extends React.Component {
     })
   }
 
-  onLogin = () => {
-    auth.login()
-  }
+  onLogin = () => this.props.doFetchAuthToken()
 
   onSetTimer = (rivescriptContext) => {
     const {mins, secs} = rivescriptContext[user]
@@ -66,8 +79,15 @@ class App extends React.Component {
     })
   }
 
+  componentWillReceiveProps (props) {
+    if (props.userState.userId && !props.userState.user) {
+      console.log('fetch or create', props.userState.userId)
+    }
+  }
+
   render() {
     const { onUserInput, onTimerFinish } = this
+
     return (
       <div className='aspect-ratio--object flex flex-column items-center justify-end'>
         <ChatPane conversation={this.state.conversation} />
@@ -79,4 +99,4 @@ class App extends React.Component {
   }
 }
 
-export default App
+export default connect('doFetchAuthToken', 'doSetAuthToken', 'selectUserState', App)
