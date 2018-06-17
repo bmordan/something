@@ -5,7 +5,6 @@ import { Provider } from 'redux-bundler-react'
 import createStore from './bundles'
 
 import App from './app/App'
-import Auth from './app/Auth'
 import NotFound from './app/NotFound'
 import Error from './app/Error'
 import Credits from './app/Credits'
@@ -15,7 +14,6 @@ const store = createStore()
 class Router extends SimpleReactRouter {
   routes(map){
     map('/', App)
-    map('/auth', Auth)
     map('/error', Error)
     map('/credits', Credits)
     map('/:path*', NotFound)
