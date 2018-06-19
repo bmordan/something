@@ -6,6 +6,8 @@
     "auth0-js": "^9.6.0",
     "hapi": "^17.5.1",
     "history": "^4.7.2",
+    "idtoken-verifier": "^1.2.0",
+    "pouchdb": "^6.4.3",
     "ramda": "^0.25.0",
     "react": "^16.4.0",
     "react-dom": "^16.4.0",

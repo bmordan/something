@@ -5,35 +5,35 @@ import InputBox from './InputBox'
 import ChatPane from './ChatPane'
 import Timer from './Timer'
 import { connect } from 'redux-bundler-react'
-import auth from '../lib/auth'
 import createHistory from 'history/createBrowserHistory'
+import parseHash from '../lib/parse'
+import IdTokenVerifier from 'idtoken-verifier'
 
 const history = createHistory()
 const bot = new RiveScript()
 const user = 'temp_user'
+const jwt = new IdTokenVerifier({
+  issuer: 'https://my.auth0.com/',
+  audience: '_G2atzNRwzG_sGQCAX8L8Zrj3r0Drqkz'
+})
 
 class App extends React.Component {
   constructor (props) {
     super(props)
 
     this.state = {
-      welcome: props.userState.user ? `Hi ${props.userState.user.name}` : `I don't know who you are`,
+      welcome: 'Hello',
       conversation: [],
       timer: false
     }
 
-    auth.parseHash((err, authResult) => {
-      if (authResult && authResult.idTokenPayload) {
+    const {id_token} = parseHash(window.location.hash)
 
-        const {idTokenPayload: { sub: userId }} = authResult
-
-        props.doSetAuthToken({userId})
-        history.push('/')
-      } else if (err) {
-        history.push('/error')
-        console.error(err)
-      }
-    })
+    if (id_token) {
+      const {payload: {sub: userId}} = jwt.decode(id_token)
+      props.doSetAuthToken({userId})
+      history.push('/')
+    }
 
     bot.loadFile([
       'begin.rive',
@@ -77,6 +77,7 @@ class App extends React.Component {
     this.setState({
       conversation: concat(this.state.conversation, conversation)
     })
+
   }
 
   componentWillReceiveProps (props) {
