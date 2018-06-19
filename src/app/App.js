@@ -8,6 +8,7 @@ import { connect } from 'redux-bundler-react'
 import createHistory from 'history/createBrowserHistory'
 import parseHash from '../lib/parse'
 import IdTokenVerifier from 'idtoken-verifier'
+import db from '../lib/pouch'
 
 const history = createHistory()
 const bot = new RiveScript()
@@ -59,8 +60,20 @@ class App extends React.Component {
   onTimerFinish = (timeInfo) => {
     this.setState({
       time: false,
-      conversation: concat(this.state.conversation, [{text: `logged ${timeInfo} session`, actor: 'bot'}])
+      conversation: concat(this.state.conversation, [{text: `${timeInfo} meditation session`, actor: 'bot'}])
     })
+
+    if (this.props.userState.userId) {
+      
+      const created = new Date().getTime()
+
+      db.put({
+        _id: `${this.props.userState.userId}|${created}`,
+        type: 'time',
+        value: timeInfo,
+        created
+      })
+    }
   }
 
   onUserInput = (value) => {
