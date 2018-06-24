@@ -1,9 +1,10 @@
 import React from 'react'
 import RiveScript from 'rivescript'
-import { concat } from 'ramda'
+import { concat, last } from 'ramda'
 import InputBox from './InputBox'
 import ChatPane from './ChatPane'
 import Timer from './Timer'
+import Buttons from './Buttons'
 import { connect } from 'redux-bundler-react'
 import createHistory from 'history/createBrowserHistory'
 import parseHash from '../lib/parse'
@@ -23,7 +24,8 @@ class App extends React.Component {
 
     this.state = {
       conversation: [],
-      timer: false
+      timer: false,
+      buttons: []
     }
     // token coming in via window.location from Auth0
     const {id_token} = parseHash(window.location.hash)
@@ -54,14 +56,16 @@ class App extends React.Component {
   }
 
   componentWillReceiveProps (props) {
-    if (props.userState.id) bot.setVariable('name', props.userState.name)
+    const { id, auth0, name } = props.userState
+
+    if (id) bot.setVariable('user_name', name)
+    if (auth0) bot.setVariable('auth0', auth0)
   }
 
   onLogin = () => this.props.doFetchAuthToken()
 
-  onSetName = (rivescriptContext) => {
-    const { id } = this.props.userState
-    const { name } = rivescriptContext[id || 'default_user']
+  onSetName = (rivescriptContext, currentUser) => {
+    const { name } = rivescriptContext['default_user']
     this.props.doFetchUser({ name, type: 'user' })
   }
 
@@ -79,17 +83,32 @@ class App extends React.Component {
 
   onUserInput = (value) => {
     const { id } = this.props.userState
+
+    const replies = bot.reply(id || 'default_user', value, this).split('|')
+
+    // Have we got buttons?
+    let maybeButtons;
+    try {
+      maybeButtons = JSON.parse(last(replies))
+    } catch (err) {
+      maybeButtons = null
+    }
+    // if we have buttons knock them off the array
+    const buttons = maybeButtons ? JSON.parse(replies.pop()) : []
+
+    // build next portion of conversation
     let conversation = [
       {text: value, actor: id || 'default_user'}
     ]
-
-    const reply = bot.reply(id || 'default_user', value, this)
-
-    conversation.push({text: reply, actor: 'bot'})
-
-    this.setState({
-      conversation: concat(this.state.conversation, conversation)
+    replies.forEach(reply => {
+      conversation.push({text: reply, actor: 'bot'})
     })
+    this.setState({
+      conversation: concat(this.state.conversation, conversation),
+      buttons: buttons
+    })
+
+    console.log("current_topic", bot._users[id].topic)
   }
 
   render() {
@@ -98,9 +117,15 @@ class App extends React.Component {
     return (
       <div className='aspect-ratio--object flex flex-column items-center justify-end'>
         <ChatPane conversation={this.state.conversation} />
-        {!this.state.time
+        {!this.state.time && !this.state.buttons.length
           ? <InputBox bot={bot} onUserInput={onUserInput} userState={this.props.userState} />
-          : <Timer time={this.state.time} onTimerFinish={onTimerFinish} />}
+          : null}
+        {this.state.time
+          ? <Timer time={this.state.time} onTimerFinish={onTimerFinish} />
+          : null}
+        {!this.state.buttons.length
+          ? null
+          : <Buttons onUserInput={onUserInput} buttons={this.state.buttons} />}
       </div>
     )
   }
