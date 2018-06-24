@@ -7,12 +7,11 @@ const messageClasses = {
 }
 
 class ChatPane extends React.Component {
-  componentDidMount () {
+  render () {
     setTimeout(() => {
       document.getElementById('chat-pane').scrollIntoView({block: 'end'})
     }, 0)
-  }
-  render () {
+
     return (
       <div className="absolute top-0 left-0 right-0 overflow-scroll" style={{bottom: '25vh'}}>
         <div id="chat-pane" className="flex flex-column justify-end bg-near-white overflow-scroll" style={{minHeight: '75vh'}}>

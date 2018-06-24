@@ -1,0 +1,15 @@
+version: "2"
+
+services:
+  couchdb:
+    image: couchdb:latest
+    container_name: "something-couchdb"
+    ports:
+      - 4000:5984
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: password
+    volumes:
+      - /Users/bernardmordan/Desktop/db:/opt/couchdb/data
+
+# http://localhost:4000/_utils/#login

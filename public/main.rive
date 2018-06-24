@@ -1,19 +1,38 @@
 ! version = 2.0
 
-+ (hello|hi|ok|lets go)
-- Hello, Bernard!
-- Hi there
++ hello
+* <bot user_name> == default_user => I am something. Who are you?
+- How are you <bot user_name>?{topic=intro}
 
-+ timer
-- _set_timer<call>_set_timer</call>
++ *
+%  i am something who are you
+- <call>_set_name</call>Nice to meet you <star><set name=<star>>
+
++ hi
+@ hello
 
 + login
 - <call>_login</call>
 
-+ set [a] (time|timer)
-* <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
-* <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
-- you have a timer for <get mins> mins and <get secs> seconds
+> topic intro
+  + more
+  - I have meditations for those with and without experience|What level of meditation have you done?|["Not much","A lot"]
+  + timer
+  - lets set a short timer for 3 seconds|just to see how it works|type set a timer{topic=meditation_ready}
+  + *
+  - I am a bot who can help your meditation practice|I can time your sessions and remember them|I can also suggest things to meditate on|Want to try setting a time?|["Timer","More"]
+< intro
+
+> topic meditation_ready
+  + [set] [a] (time|timer)
+  * <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
+  * <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
+  - you have a timer for <get mins> mins and <get secs> seconds
+
+  + *
+  - ready for meditation|["set a timer"]
+< meditation_ready
+
 
 > topic less_than_sixty_minutes
   + #
@@ -38,4 +57,8 @@
 
 > object _login javascript
   this.onLogin()
+< object
+
+> object _set_name javascript
+  this.onSetName(arguments[0]._users)
 < object
