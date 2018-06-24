@@ -8,11 +8,10 @@ import { connect } from 'redux-bundler-react'
 import createHistory from 'history/createBrowserHistory'
 import parseHash from '../lib/parse'
 import IdTokenVerifier from 'idtoken-verifier'
-import db from '../lib/pouch'
 
 const history = createHistory()
+const something_user = window.localStorage.getItem('something_user')
 const bot = new RiveScript()
-const user = 'temp_user'
 const jwt = new IdTokenVerifier({
   issuer: 'https://my.auth0.com/',
   audience: '_G2atzNRwzG_sGQCAX8L8Zrj3r0Drqkz'
@@ -23,11 +22,10 @@ class App extends React.Component {
     super(props)
 
     this.state = {
-      welcome: 'Hello',
       conversation: [],
       timer: false
     }
-
+    // token coming in via window.location from Auth0
     const {id_token} = parseHash(window.location.hash)
 
     if (id_token) {
@@ -36,24 +34,39 @@ class App extends React.Component {
       history.push('/')
     }
 
+    if (something_user) {
+      props.doFetchUser({id: something_user})
+    }
+
     bot.loadFile([
       'begin.rive',
       'main.rive'
     ], () => {
 
       const conversation = [
-        {text: this.state.welcome, actor: 'bot'},
+        {text: 'hello', actor: 'bot'},
       ]
 
       bot.sortReplies()
+
       this.setState({conversation})
     })
   }
 
+  componentWillReceiveProps (props) {
+    if (props.userState.id) bot.setVariable('name', props.userState.name)
+  }
+
   onLogin = () => this.props.doFetchAuthToken()
 
+  onSetName = (rivescriptContext) => {
+    const { id } = this.props.userState
+    const { name } = rivescriptContext[id || 'default_user']
+    this.props.doFetchUser({ name, type: 'user' })
+  }
+
   onSetTimer = (rivescriptContext) => {
-    const {mins, secs} = rivescriptContext[user]
+    const {mins, secs} = rivescriptContext[this.props.userState.id]
     this.setState({time: {m: mins, s: secs}})
   }
 
@@ -62,41 +75,21 @@ class App extends React.Component {
       time: false,
       conversation: concat(this.state.conversation, [{text: `${timeInfo} meditation session`, actor: 'bot'}])
     })
-
-    if (this.props.userState.userId) {
-      
-      const created = new Date().getTime()
-
-      db.put({
-        _id: `${this.props.userState.userId}|${created}`,
-        type: 'time',
-        value: timeInfo,
-        created
-      })
-    }
   }
 
   onUserInput = (value) => {
+    const { id } = this.props.userState
     let conversation = [
-      {text: value, actor: 'user'}
+      {text: value, actor: id || 'default_user'}
     ]
 
-    const reply = bot.reply(user, value, this)
+    const reply = bot.reply(id || 'default_user', value, this)
 
-    if (reply && reply !== '_set_timer') {
-      conversation.push({text: reply, actor: 'bot'})
-    }
+    conversation.push({text: reply, actor: 'bot'})
 
     this.setState({
       conversation: concat(this.state.conversation, conversation)
     })
-
-  }
-
-  componentWillReceiveProps (props) {
-    if (props.userState.userId && !props.userState.user) {
-      console.log('fetch or create', props.userState.userId)
-    }
   }
 
   render() {
@@ -106,11 +99,16 @@ class App extends React.Component {
       <div className='aspect-ratio--object flex flex-column items-center justify-end'>
         <ChatPane conversation={this.state.conversation} />
         {!this.state.time
-          ? <InputBox bot={bot} onUserInput={onUserInput} />
+          ? <InputBox bot={bot} onUserInput={onUserInput} userState={this.props.userState} />
           : <Timer time={this.state.time} onTimerFinish={onTimerFinish} />}
       </div>
     )
   }
 }
 
-export default connect('doFetchAuthToken', 'doSetAuthToken', 'selectUserState', App)
+export default connect(
+  'doFetchAuthToken',
+  'doSetAuthToken',
+  'doFetchUser',
+  'selectUserState',
+  App)

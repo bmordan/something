@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "ajv": "^6.5.1",
     "auth0-js": "^9.6.0",
     "hapi": "^17.5.1",
     "history": "^4.7.2",

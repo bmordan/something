@@ -26,7 +26,9 @@ class InputBox extends Component {
 
     return (
       <form className='pb5' onSubmit={onSubmit}>
-        <input className='pa2' type="text" onChange={onChange} value={state.value} placeholder="Ask me something" />
+        <span className={`dib bb bw1 ${this.props.userState.auth0 ? 'b--dark-red' : 'b--washed-red'}`}>
+          <input className='pa2 outline-transparent' type="text" onChange={onChange} value={state.value} placeholder="Ask me something" />
+        </span>
         <button className='w4 ml2 pa2 b--transparent bg-washed-red red' type='submit'>Send</button>
       </form>
     )

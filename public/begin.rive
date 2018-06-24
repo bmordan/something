@@ -1,8 +1,7 @@
 ! version = 2.0
 
 // Bot variables
-! var name = Tutorial
-! var age  = 5
+! var name = default_user
 
 // Substitutions
 ! sub i'm     = i am

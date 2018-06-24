@@ -1,4 +1,5 @@
 import React from 'react'
+// import db from '../lib/pouch'
 
 const messageClasses = {
   bot: 'bg-light-red washed-red tr',
@@ -11,6 +12,11 @@ class ChatPane extends React.Component {
     setTimeout(() => {
       document.getElementById('chat-pane').scrollIntoView({block: 'end'})
     }, 0)
+
+    // db.allDocs({include_docs: true, limit: 5})
+    //   .then(docs => {
+    //     console.log(docs)
+    //   }).catch(err => console.error(err));
   }
   render () {
     return (

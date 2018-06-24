@@ -1,11 +1,15 @@
 ! version = 2.0
 
-+ (hello|hi|ok|lets go)
-- Hello, Bernard!
-- Hi there
++ hello
+* <bot name> == default_user => I am something. Who are you?
+- How are you <bot name>?
 
-+ timer
-- _set_timer<call>_set_timer</call>
++ *
+%  i am something who are you
+- <call>_set_name</call>Nice to meet you <star><set name=<star>>
+
++ hi
+@ hello
 
 + login
 - <call>_login</call>
@@ -38,4 +42,8 @@
 
 > object _login javascript
   this.onLogin()
+< object
+
+> object _set_name javascript
+  this.onSetName(arguments[0]._users)
 < object
