@@ -1,7 +1,7 @@
 import PouchDB from 'pouchdb'
 PouchDB.debug.disable('*')
 
-const db = new PouchDB('beta_something')
+const db = new PouchDB('beta01_something')
 const remoteDB = new PouchDB('http://localhost:4000/beta_something')
 
 db.replicate.to(remoteDB)

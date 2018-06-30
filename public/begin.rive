@@ -1,7 +1,7 @@
 ! version = 2.0
 
 // Bot variables
-! var user_name = default_user
+! var user_name = 'default_user'
 ! var auth0 = undefined
 
 // Substitutions

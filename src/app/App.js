@@ -1,6 +1,6 @@
 import React from 'react'
 import RiveScript from 'rivescript'
-import { concat, last } from 'ramda'
+import { concat, last, merge } from 'ramda'
 import InputBox from './InputBox'
 import ChatPane from './ChatPane'
 import Timer from './Timer'
@@ -11,12 +11,38 @@ import parseHash from '../lib/parse'
 import IdTokenVerifier from 'idtoken-verifier'
 
 const history = createHistory()
-const something_user = window.localStorage.getItem('something_user')
 const bot = new RiveScript()
 const jwt = new IdTokenVerifier({
   issuer: 'https://my.auth0.com/',
   audience: '_G2atzNRwzG_sGQCAX8L8Zrj3r0Drqkz'
 })
+
+const initConversation = (_id, name) => {
+  let conversation = [];
+
+  if (_id && name) {
+    conversation.push({
+      text: `Hello again ${name}`,
+      actor: 'bot'
+    })
+  } else if (_id && !name) {
+    const welcomes = [
+      'Hello again',
+      `Now. I know you as ${_id}`,
+      `That's not a great name`,
+      'What would you like to be known as?'
+    ]
+
+    welcomes.forEach(text => conversation.push({ text, actor: 'bot' }))
+  } else if (!_id && !name) {
+    conversation.push({
+      text: `Hello`,
+      actor: 'bot'
+    })
+  }
+
+  return conversation
+}
 
 class App extends React.Component {
   constructor (props) {
@@ -27,67 +53,74 @@ class App extends React.Component {
       timer: false,
       buttons: []
     }
+    // Users Auth0 id
+    const something_user = window.localStorage.getItem('something_user')
+    // Get or create
+    if (something_user) props.doFetchOrCreateUser(something_user)
     // token coming in via window.location from Auth0
-    const {id_token} = parseHash(window.location.hash)
+    const { id_token } = parseHash(window.location.hash)
 
     if (id_token) {
       const {payload: {sub: userId}} = jwt.decode(id_token)
-      props.doSetAuthToken({userId})
+      window.localStorage.setItem('something_user', userId)
+      props.doFetchOrCreateUser(userId)
       history.push('/')
-    }
-
-    if (something_user) {
-      props.doFetchUser({id: something_user})
     }
 
     bot.loadFile([
       'begin.rive',
       'main.rive'
     ], () => {
-
-      const conversation = [
-        {text: 'hello', actor: 'bot'},
-      ]
-
       bot.sortReplies()
-
-      this.setState({conversation})
     })
   }
 
   componentWillReceiveProps (props) {
-    const { id, auth0, name } = props.userState
+    if (!props.userState.user) return
 
-    if (id) bot.setVariable('user_name', name)
-    if (auth0) bot.setVariable('auth0', auth0)
+    const { _id , name } = props.userState.user
+
+    if (!this.state.conversation.length) {
+      this.setState({conversation: initConversation(_id , name)})
+    }
+
+    console.log(props)
   }
 
   onLogin = () => this.props.doFetchAuthToken()
 
   onSetName = (rivescriptContext, currentUser) => {
-    const { name } = rivescriptContext['default_user']
-    this.props.doFetchUser({ name, type: 'user' })
+    const user = this.props.userState && this.props.userState.user
+    const { name } = rivescriptContext[user._id || 'default_user']
+    const update = merge(this.props.userState.user, { name })
+    this.props.doUpdateUser(update)
   }
 
   onSetTimer = (rivescriptContext) => {
-    const {mins, secs} = rivescriptContext[this.props.userState.id]
+    const {mins, secs} = rivescriptContext[this.props.userState.user._id]
     this.setState({time: {m: mins, s: secs}})
   }
 
   onTimerFinish = (timeInfo) => {
     this.setState({
       time: false,
-      conversation: concat(this.state.conversation, [{text: `${timeInfo} meditation session`, actor: 'bot'}])
+      conversation: concat(this.state.conversation, [{
+        text: `${timeInfo} meditation session`,
+        actor: 'bot'
+      }])
     })
   }
 
   onUserInput = (value) => {
-    const { id } = this.props.userState
+    const _id = this.props.userState
+      && this.props.userState.user
+      && this.props.userState.user._id
 
-    const replies = bot.reply(id || 'default_user', value, this).split('|')
+    const replies = bot.reply(_id || 'default_user', value, this).split('|')
 
     // Have we got buttons?
     let maybeButtons;
+
     try {
       maybeButtons = JSON.parse(last(replies))
     } catch (err) {
@@ -98,17 +131,17 @@ class App extends React.Component {
 
     // build next portion of conversation
     let conversation = [
-      {text: value, actor: id || 'default_user'}
+      {text: value, actor: _id || 'default_user'}
     ]
+
     replies.forEach(reply => {
       conversation.push({text: reply, actor: 'bot'})
     })
+
     this.setState({
       conversation: concat(this.state.conversation, conversation),
       buttons: buttons
     })
-
-    console.log("current_topic", bot._users[id].topic)
   }
 
   render() {
@@ -134,6 +167,7 @@ class App extends React.Component {
 export default connect(
   'doFetchAuthToken',
   'doSetAuthToken',
-  'doFetchUser',
+  'doFetchOrCreateUser',
+  'doUpdateUser',
   'selectUserState',
   App)

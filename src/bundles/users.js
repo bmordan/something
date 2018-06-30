@@ -6,9 +6,7 @@ export default {
 
   getReducer: () => {
     const initialState = {
-      id: null,
-      name: 'default_user',
-      auth0: null,
+      user: null,
       fetching: false,
       userError: null
     }
@@ -21,8 +19,7 @@ export default {
         })
         case 'FETCH_AUTH_TOKEN_SUCCESS':
         return Object.assign({}, state, {
-          fetching: false,
-          auth0: payload.userId
+          fetching: false
         })
         case 'FETCH_USER_START':
         return Object.assign({}, state, {
@@ -30,8 +27,7 @@ export default {
         })
         case 'FETCH_USER_SUCCESS':
         return Object.assign({}, state, {
-          id: payload._id,
-          name: payload.name,
+          user: payload,
           fetching: false
         })
         case 'FETCH_USER_ERROR':
@@ -48,42 +44,47 @@ export default {
     dispatch({ type: 'FETCH_AUTH_TOKEN_START' })
     auth.authorize()
   },
-  doSetAuthToken: (payload) => ({ dispatch }) => {
-    const type = 'FETCH_AUTH_TOKEN_SUCCESS'
-    dispatch({ type, payload })
+  doSetAuthToken: () => ({ dispatch }) => {
+    dispatch({ type: 'FETCH_AUTH_TOKEN_SUCCESS' })
   },
-  doFetchUser: (user) => ({ dispatch }) => {
+  doFetchOrCreateUser: (auth0) => ({ dispatch }) => {
 
     dispatch({ type: 'FETCH_USER_START' })
 
-    if (user.id) {
-      db.get(user.id)
-        .then(payload => {
+    if (auth0) dispatch({ type: 'FETCH_AUTH_TOKEN_SUCCESS' })
+
+    db.get(auth0, (err, payload) => {
+      if (err && err.status === 404) {
+        db.put({
+          _id: auth0,
+          name: null,
+          level: null,
+          time: null
+        }).then(({id}) => {
+          return db.get(id)
+        }).then(payload => {
           const type = 'FETCH_USER_SUCCESS'
           dispatch({ type, payload })
         })
-        .catch(payload => {
-          const type = 'FETCH_USER_ERROR'
-          dispatch({ type, payload })
-        })
-    } else if (!user.name || user.name === '') {
-      const type = 'FETCH_USER_ERROR'
-      dispatch({ type, payload: new Error('User name is empty') })
-    } else {
-      db.post(user)
-        .then(payload => {
-          return db.get(payload.id)
-        })
-        .then(payload => {
-          window.localStorage.setItem('something_user', payload._id)
-          const type = 'FETCH_USER_SUCCESS'
-          dispatch({ type, payload })
-        })
-        .catch(payload => {
-          const type = 'FETCH_USER_ERROR'
-          dispatch({ type, payload })
-        })
-    }
+      } else {
+        const type = 'FETCH_USER_SUCCESS'
+        dispatch({ type, payload })
+      }
+    })
+  },
+  doUpdateUser: (update) => ({ dispatch }) => {
+    dispatch({ type: 'FETCH_USER_START' })
+
+    db.put(update)
+      .then(({id}) => db.get(id))
+      .then(payload => {
+        const type = 'FETCH_USER_SUCCESS'
+        dispatch({ type, payload })
+      })
+      .catch(payload => {
+        const type = 'FETCH_USER_ERROR'
+        dispatch({ type, payload })
+      })
   },
   selectUserState: state => state.users
 }

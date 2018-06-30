@@ -1,22 +1,33 @@
 ! version = 2.0
 
 + hello
-* <bot user_name> == default_user => I am something. Who are you?
+* <bot user_name> == 'default_user' => Have we meet before?|["Yes", "No"]
 - How are you <bot user_name>?{topic=intro}
 
-+ *
-%  i am something who are you
-- <call>_set_name</call>Nice to meet you <star><set name=<star>>
++ yes
+* <bot auth0> == undefined => You need to remind me who you are|["OK"]
+
++ no
+- Explain what this app is all about
+
++ ok
+- <call>_login</call>
 
 + hi
 @ hello
 
 + login
-- <call>_login</call>
+@ ok
+
++ *
+- <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
+
++ *
+- <call>_set_name</call>Thanks<set name=<star>> <get name>, nice to meet you.{topic=meditation_ready}
 
 > topic intro
   + more
-  - I have meditations for those with and without experience|What level of meditation have you done?|["Not much","A lot"]
+  - I have meditations for those with and without experience|What level of meditation have you done?|["Not much", "A lot"]
   + timer
   - lets set a short timer for 3 seconds|just to see how it works|type set a timer{topic=meditation_ready}
   + *
