@@ -3,6 +3,14 @@
 + (hello|hi)
 * <bot auth0> == undefined => Have we meet before?|["Yes we have met", "No I'm new to this"]{topic=auth0}
 
++ set a new timer
+* <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
+* <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
+- you have a timer for <get mins> mins and <get secs> seconds{topic=meditation_ready}
+
++ give me something to meditate on
+- ok something to think about...
+
 + *
 * <bot user_name> == 'default_name' => <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
 - Hi <bot user_name>{topic=meditation_ready}
@@ -25,9 +33,9 @@
 
 > topic meditation_ready
   + set a timer
-  * <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
-  * <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
-  - you have a timer for <get mins> mins and <get secs> seconds
+  * <get mins> == undefined => minutes?{topic=less_than_sixty_minutes}
+  * <get secs> == undefined => seconds?{topic=less_than_sixty_seconds}
+  - <get mins> mins and <get secs> seconds
 
   + give me something to meditate on
   - ok something to think about...

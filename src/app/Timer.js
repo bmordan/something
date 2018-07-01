@@ -16,7 +16,7 @@ class Timer extends React.Component {
     })
 
     this.timer.on('finish', (evt) => {
-      this.props.onTimerFinish(this.timer.formattedDuration)
+      this.props.onTimerFinish(this.timer)
     })
   }
 
