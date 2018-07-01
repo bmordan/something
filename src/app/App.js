@@ -132,14 +132,16 @@ class App extends React.Component {
     this.setState({time: {m: mins, s: secs}})
   }
 
-  onTimerFinish = (timeInfo) => {
+  onTimerFinish = (timer) => {
     this.setState({
       time: false,
       conversation: concat(this.state.conversation, [{
-        text: `${timeInfo} meditation session`,
+        text: `${timer.formattedDuration} meditation session`,
         actor: 'bot'
       }])
     })
+
+    console.log('save', timer)
   }
 
   onUserInput = (value) => {
