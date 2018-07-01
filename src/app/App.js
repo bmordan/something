@@ -11,52 +11,28 @@ import parseHash from '../lib/parse'
 import IdTokenVerifier from 'idtoken-verifier'
 
 const history = createHistory()
-const bot = new RiveScript()
+const bot = new RiveScript({debug: true})
 const jwt = new IdTokenVerifier({
   issuer: 'https://my.auth0.com/',
   audience: '_G2atzNRwzG_sGQCAX8L8Zrj3r0Drqkz'
 })
-
-const initConversation = (_id, name) => {
-  let conversation = [];
-
-  if (_id && name) {
-    conversation.push({
-      text: `Hello again ${name}`,
-      actor: 'bot'
-    })
-  } else if (_id && !name) {
-    const welcomes = [
-      'Hello again',
-      `Now. I know you as ${_id}`,
-      `That's not a great name`,
-      'What would you like to be known as?'
-    ]
-
-    welcomes.forEach(text => conversation.push({ text, actor: 'bot' }))
-  } else if (!_id && !name) {
-    conversation.push({
-      text: `Hello`,
-      actor: 'bot'
-    })
-  }
-
-  return conversation
-}
 
 class App extends React.Component {
   constructor (props) {
     super(props)
 
     this.state = {
-      conversation: [],
+      conversation: [{text: 'Hello', actor: 'bot'}],
       timer: false,
       buttons: []
     }
     // Users Auth0 id
     const something_user = window.localStorage.getItem('something_user')
     // Get or create
-    if (something_user) props.doFetchOrCreateUser(something_user)
+    if (something_user) {
+      props.doFetchOrCreateUser(something_user)
+      bot.setVariable('auth0', something_user)
+    }
     // token coming in via window.location from Auth0
     const { id_token } = parseHash(window.location.hash)
 
@@ -75,16 +51,71 @@ class App extends React.Component {
     })
   }
 
+  initConversationState = (_id, name) => {
+    let state = {
+      conversation: [],
+      buttons: []
+    }
+
+    if (_id && name) {
+      state.conversation.push({
+        text: `Hello again ${name}`,
+        actor: 'bot'
+      })
+
+      state.buttons = [
+        "Set a new timer",
+        "Give me Something to meditate on"
+      ]
+    } else if (_id && !name) {
+      [
+        'Hello again',
+        `Now. I have not learnt your name`,
+        'Who would you like to be known as?'
+      ].forEach(text => state.conversation.push({ text, actor: 'bot' }))
+
+    } else if (!_id && !name) {
+      state.conversation.push({
+        text: `Hello`,
+        actor: 'bot'
+      })
+    }
+
+    this.setState(state)
+  }
+
+  addRepliesToState = (_id, reply) => {
+    const replies = reply.split('|')
+    // Have we got buttons?
+    let maybeButtons;
+
+    try {
+      maybeButtons = JSON.parse(last(replies))
+    } catch (err) {
+      maybeButtons = null
+    }
+    // if we have buttons knock them off the array
+    const buttons = maybeButtons ? JSON.parse(replies.pop()) : []
+
+    // build next portion of conversation
+    let conversation = []
+
+    replies.forEach(reply => conversation.push({text: reply, actor: 'bot'}))
+
+    this.setState({
+      conversation: concat(this.state.conversation, conversation),
+      buttons: buttons
+    })
+  }
+
   componentWillReceiveProps (props) {
     if (!props.userState.user) return
 
-    const { _id , name } = props.userState.user
+    const { _id , name = 'default_user' } = props.userState.user
 
-    if (!this.state.conversation.length) {
-      this.setState({conversation: initConversation(_id , name)})
-    }
+    bot.setVariable('user_name', name)
 
-    console.log(props)
+    if (this.state.conversation.length === 1) this.initConversationState(_id , name)
   }
 
   onLogin = () => this.props.doFetchAuthToken()
@@ -116,32 +147,16 @@ class App extends React.Component {
       && this.props.userState.user
       && this.props.userState.user._id
 
-    const replies = bot.reply(_id || 'default_user', value, this).split('|')
-
-    // Have we got buttons?
-    let maybeButtons;
-
-    try {
-      maybeButtons = JSON.parse(last(replies))
-    } catch (err) {
-      maybeButtons = null
-    }
-    // if we have buttons knock them off the array
-    const buttons = maybeButtons ? JSON.parse(replies.pop()) : []
-
-    // build next portion of conversation
-    let conversation = [
-      {text: value, actor: _id || 'default_user'}
-    ]
-
-    replies.forEach(reply => {
-      conversation.push({text: reply, actor: 'bot'})
-    })
-
     this.setState({
-      conversation: concat(this.state.conversation, conversation),
-      buttons: buttons
+      conversation: concat(this.state.conversation, [{
+        text: value,
+        actor: _id || 'default_user'
+      }])
     })
+
+    const reply = bot.reply(_id || 'default_user', value, this)
+
+    this.addRepliesToState(_id, reply)
   }
 
   render() {

@@ -1,47 +1,39 @@
 ! version = 2.0
 
-+ hello
-* <bot user_name> == 'default_user' => Have we meet before?|["Yes", "No"]
-- How are you <bot user_name>?{topic=intro}
-
-+ yes
-* <bot auth0> == undefined => You need to remind me who you are|["OK"]
-
-+ no
-- Explain what this app is all about
-
-+ ok
-- <call>_login</call>
-
-+ hi
-@ hello
-
-+ login
-@ ok
++ (hello|hi)
+* <bot auth0> == undefined => Have we meet before?|["Yes we have met", "No I'm new to this"]{topic=auth0}
 
 + *
-- <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
+* <bot user_name> == 'default_name' => <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
+- Hi <bot user_name>{topic=meditation_ready}
 
-+ *
-- <call>_set_name</call>Thanks<set name=<star>> <get name>, nice to meet you.{topic=meditation_ready}
+> topic auth0
+  + yes we have met
+  - You need to remind me who you are|["sure I can remind you"]
 
-> topic intro
-  + more
-  - I have meditations for those with and without experience|What level of meditation have you done?|["Not much", "A lot"]
-  + timer
-  - lets set a short timer for 3 seconds|just to see how it works|type set a timer{topic=meditation_ready}
+  + sure i can remind you
+  - <call>_login</call>
+
+  + no i am new to this
+  - Explain what this app is all about...
+< topic
+
+> topic get_name
   + *
-  - I am a bot who can help your meditation practice|I can time your sessions and remember them|I can also suggest things to meditate on|Want to try setting a time?|["Timer","More"]
-< intro
+  - <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
+< topic
 
 > topic meditation_ready
-  + [set] [a] (time|timer)
+  + set a timer
   * <get mins> == undefined => for how many minutes?{topic=less_than_sixty_minutes}
   * <get secs> == undefined => for how many seconds?{topic=less_than_sixty_seconds}
   - you have a timer for <get mins> mins and <get secs> seconds
 
+  + give me something to meditate on
+  - ok something to think about...
+
   + *
-  - ready for meditation|["set a timer"]
+  - You are in the meditation_ready topic
 < meditation_ready
 
 
