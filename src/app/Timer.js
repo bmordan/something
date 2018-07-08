@@ -24,14 +24,17 @@ class Timer extends React.Component {
     this.timer.start()
   }
 
+  onCancel = () => {
+    this.props.onTimerFinish()
+  }
+
   render () {
-    const { onTimerFinish } = this.props
     return (
       <div className="absolute bottom-0 left-0 right-0 mt1" style={{top: '74.5vh'}}>
         <div className="f1 tc w-100 bg-washed-red red pv4"><samp>{this.state.time}</samp></div>
         <div className="flex items-center justify-between pa2 mb2">
           <button onClick={this.onStart} className="w4 b--transparent pa2 bg-washed-red red">Start</button>
-          <button onClick={onTimerFinish} className="w4 b--transparent pa2 bg-near-white gray">Cancel</button>
+          <button onClick={this.onCancel} className="w4 b--transparent pa2 bg-near-white gray">Cancel</button>
         </div>
       </div>
     )

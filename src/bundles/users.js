@@ -35,6 +35,8 @@ export default {
           fetching: false,
           userError: JSON.stringify(payload, null, 2)
         })
+        case 'RESET_USER':
+        return Object.assign({}, initialState)
         default:
         return state
       }
@@ -74,7 +76,6 @@ export default {
   },
   doUpdateUser: (update) => ({ dispatch }) => {
     dispatch({ type: 'FETCH_USER_START' })
-
     db.put(update)
       .then(({id}) => db.get(id))
       .then(payload => {
@@ -85,6 +86,9 @@ export default {
         const type = 'FETCH_USER_ERROR'
         dispatch({ type, payload })
       })
+  },
+  doRemoveUser: () => ({ dispatch }) => {
+    dispatch({ type: 'RESET_USER' })
   },
   selectUserState: state => state.users
 }

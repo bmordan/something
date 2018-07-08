@@ -1,6 +1,7 @@
 import React from 'react'
 import RiveScript from 'rivescript'
-import { concat, last, merge } from 'ramda'
+import { last, merge, isEmpty, concat } from 'ramda'
+import moment from 'moment'
 import InputBox from './InputBox'
 import ChatPane from './ChatPane'
 import Timer from './Timer'
@@ -11,7 +12,7 @@ import parseHash from '../lib/parse'
 import IdTokenVerifier from 'idtoken-verifier'
 
 const history = createHistory()
-const bot = new RiveScript({debug: true})
+const bot = new RiveScript()
 const jwt = new IdTokenVerifier({
   issuer: 'https://my.auth0.com/',
   audience: '_G2atzNRwzG_sGQCAX8L8Zrj3r0Drqkz'
@@ -21,25 +22,28 @@ class App extends React.Component {
   constructor (props) {
     super(props)
 
-    this.state = {
-      conversation: [{text: 'Hello', actor: 'bot'}],
-      timer: false,
-      buttons: []
-    }
-    // Users Auth0 id
     const something_user = window.localStorage.getItem('something_user')
-    // Get or create
+    const { id_token } = parseHash(window.location.hash)
+
+    this.state = {
+      timer: false,
+      buttons: [],
+      conversation: [],
+      openingGambit: true
+    }
+
     if (something_user) {
       props.doFetchOrCreateUser(something_user)
+      props.doFetchOrCreateChat(something_user)
       bot.setVariable('auth0', something_user)
     }
     // token coming in via window.location from Auth0
-    const { id_token } = parseHash(window.location.hash)
-
     if (id_token) {
       const {payload: {sub: userId}} = jwt.decode(id_token)
       window.localStorage.setItem('something_user', userId)
+      bot.setVariable('auth0', userId)
       props.doFetchOrCreateUser(userId)
+      props.doFetchOrCreateChat(userId)
       history.push('/')
     }
 
@@ -48,45 +52,24 @@ class App extends React.Component {
       'main.rive'
     ], () => {
       bot.sortReplies()
+
+      if (!id_token && !something_user) {
+        const _id = moment().unix().toString()
+        const reply = bot.reply('default_user', 'hello', this)
+        const text = this.stripAndSetButtons(reply)
+
+        this.setState({conversation: [{
+          doc: { actor: 'bot', text },
+          _id,
+          key: _id
+        }]})
+      }
     })
   }
 
-  initConversationState = (_id, name) => {
-    let state = {
-      conversation: [],
-      buttons: []
-    }
-
-    if (_id && name) {
-      state.conversation.push({
-        text: `Hello again ${name}`,
-        actor: 'bot'
-      })
-
-      state.buttons = [
-        "Set a new timer",
-        "Give me Something to meditate on"
-      ]
-    } else if (_id && !name) {
-      [
-        'Hello again',
-        `Now. I have not learnt your name`,
-        'Who would you like to be known as?'
-      ].forEach(text => state.conversation.push({ text, actor: 'bot' }))
-
-    } else if (!_id && !name) {
-      state.conversation.push({
-        text: `Hello`,
-        actor: 'bot'
-      })
-    }
-
-    this.setState(state)
-  }
-
-  addRepliesToState = (_id, reply) => {
+  stripAndSetButtons = (reply) => {
     const replies = reply.split('|')
-    // Have we got buttons?
+
     let maybeButtons;
 
     try {
@@ -94,35 +77,34 @@ class App extends React.Component {
     } catch (err) {
       maybeButtons = null
     }
-    // if we have buttons knock them off the array
-    const buttons = maybeButtons ? JSON.parse(replies.pop()) : []
-
-    // build next portion of conversation
-    let conversation = []
-
-    replies.forEach(reply => conversation.push({text: reply, actor: 'bot'}))
 
     this.setState({
-      conversation: concat(this.state.conversation, conversation),
-      buttons: buttons
+      buttons: maybeButtons ? JSON.parse(replies.pop()) : []
     })
+
+    return replies
   }
 
-  componentWillReceiveProps (props) {
-    if (!props.userState.user) return
-
-    const { _id , name = 'default_user' } = props.userState.user
-
-    bot.setVariable('user_name', name)
-
-    if (this.state.conversation.length === 1) this.initConversationState(_id , name)
+  addRepliesToChat = (actor, reply) => {
+    const replies = this.stripAndSetButtons(reply)
+    replies.forEach(reply => {
+      this.props.doAddToChat({
+        _id: moment().unix().toString(),
+        actor,
+        text: reply
+      })
+    })
   }
 
   onLogin = () => this.props.doFetchAuthToken()
 
+  onLogout = () => {
+    this.props.doRemoveUser()
+    window.localStorage.removeItem('something_user')
+  }
+
   onSetName = (rivescriptContext, currentUser) => {
-    const user = this.props.userState && this.props.userState.user
-    const { name } = rivescriptContext[user._id || 'default_user']
+    const { name } = rivescriptContext['default_user']
     const update = merge(this.props.userState.user, { name })
     this.props.doUpdateUser(update)
   }
@@ -133,40 +115,84 @@ class App extends React.Component {
   }
 
   onTimerFinish = (timer) => {
+    this.setState({ time: false })
+
+    if (timer) {
+      this.props.doAddToChat({
+        _id: moment().unix().toString(),
+        actor: 'bot',
+        text: timer.formattedDuration,
+        timer: true
+      })
+    } else {
+      // cancel timer reset vars
+      const { _id } = this.props.userState.user
+      bot.reply(_id, 'botpromptresettimer', this)
+      // prompt with opening gambit
+      const reply = bot.reply(_id, 'botpromptopeninggambit', this)
+      this.addRepliesToChat('bot', reply)
+    }
+  }
+
+  noNameInput = (text) => {
+    if (text === 'No I\'m new to this') return this.onLogin()
+
+    const noId = moment().unix().toString()
+    const botId = moment().add(1, 'seconds').unix().toString()
+
     this.setState({
-      time: false,
       conversation: concat(this.state.conversation, [{
-        text: `${timer.formattedDuration} meditation session`,
-        actor: 'bot'
+        doc: { actor: 'user', text },
+        _id: noId,
+        key: noId
+      }, {
+        doc: { actor: 'bot', text: 'Whats your name?'},
+        _id: botId,
+        key: botId
       }])
     })
 
-    console.log('save', timer)
+    bot.reply('default_user', 'botpromptaskforname', this)
   }
 
-  onUserInput = (value) => {
+  onUserInput = (text) => {
     const _id = this.props.userState
       && this.props.userState.user
       && this.props.userState.user._id
 
-    this.setState({
-      conversation: concat(this.state.conversation, [{
-        text: value,
-        actor: _id || 'default_user'
-      }])
-    })
+    const name = this.props.userState
+      && this.props.userState.user
+      && this.props.userState.user.name
 
-    const reply = bot.reply(_id || 'default_user', value, this)
+    if (!name) return this.noNameInput(text)
 
-    this.addRepliesToState(_id, reply)
+    this.addRepliesToChat('user', text)
+    const reply = bot.reply(_id || 'default_user', text, this)
+    this.addRepliesToChat('bot', reply)
+  }
+
+  componentWillReceiveProps (props) {
+    const name = props.userState.user ? props.userState.user.name : 'default_user'
+    const _id = props.userState.user && props.userState.user._id
+
+    bot.setVariable('user_name', name)
+
+    if (this.state.openingGambit && _id && name && name !== 'default_user') {
+      const reply = bot.reply(_id, 'botpromptopeninggambit', this)
+      this.addRepliesToChat('bot', reply)
+      this.setState({openingGambit: false})
+    }
   }
 
   render() {
     const { onUserInput, onTimerFinish } = this
+    const chats = isEmpty(this.props.chats)
+      ? {rows: this.state.conversation}
+      :  this.props.chats
 
     return (
       <div className='aspect-ratio--object flex flex-column items-center justify-end'>
-        <ChatPane conversation={this.state.conversation} />
+        <ChatPane chats={chats} />
         {!this.state.time && !this.state.buttons.length
           ? <InputBox bot={bot} onUserInput={onUserInput} userState={this.props.userState} />
           : null}
@@ -186,5 +212,9 @@ export default connect(
   'doSetAuthToken',
   'doFetchOrCreateUser',
   'doUpdateUser',
+  'doRemoveUser',
+  'doFetchOrCreateChat',
+  'doAddToChat',
   'selectUserState',
+  'selectChats',
   App)
