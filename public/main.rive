@@ -11,9 +11,21 @@
 + give me something to meditate on
 - ok something to think about...
 
++ (logout|forget|bye)
+- Goodbye <bot user_name><call>_logout</call>
+
++ botpromptaskforname
+- botpromptaskforname
+
 + *
-* <bot user_name> == 'default_name' => <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
-- Hi <bot user_name>{topic=meditation_ready}
+% botpromptaskforname
+* <bot user_name> == default_user => <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
+
++ botpromptopeninggambit
+- ["Set a timer", "Give me something to meditate on"]{topic=meditation_ready}
+
++ botpromptresettimer
+- <set mins=undefined><set secs=undefined>
 
 > topic auth0
   + yes we have met
@@ -24,21 +36,22 @@
 
   + no i am new to this
   - Explain what this app is all about...
-< topic
 
-> topic get_name
-  + *
-  - <set name=<star>><call>_set_name</call><get name> what a nice name.{topic=meditation_ready}
+  + ok
+  - lets make a start{topic=random}
 < topic
 
 > topic meditation_ready
   + set a timer
   * <get mins> == undefined => minutes?{topic=less_than_sixty_minutes}
   * <get secs> == undefined => seconds?{topic=less_than_sixty_seconds}
-  - <get mins> mins and <get secs> seconds
+  - <get mins> mins and <get secs> seconds<call>_set_timer</call>
 
   + give me something to meditate on
   - ok something to think about...
+
+  + (logout|forget|bye)
+  - Goodbye <bot user_name><call>_logout</call>
 
   + *
   - You are in the meditation_ready topic
@@ -53,7 +66,7 @@
 
 > topic less_than_sixty_seconds
   + #
-  * <star> < 60 => <set secs=<star>><call>_set_timer</call>meditation session{topic=random}
+  * <star> < 60 => <set secs=<star>><call>_set_timer</call>meditation session{topic=meditation_ready}
   - oh, it has to be less than 60 seconds -> try again
 < topic
 
@@ -62,14 +75,18 @@
 - does not compute
 - nothing to say to that
 
-> object _set_timer javascript
-  this.onSetTimer(arguments[0]._users)
-< object
-
 > object _login javascript
   this.onLogin()
 < object
 
+> object _set_timer javascript
+  this.onSetTimer(arguments[0]._users)
+< object
+
 > object _set_name javascript
   this.onSetName(arguments[0]._users)
+< object
+
+> object _logout javascript
+  this.onLogout()
 < object
