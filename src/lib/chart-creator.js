@@ -1,7 +1,8 @@
-import Moment from 'moment';
-import { extendMoment } from 'moment-range';
+import Moment from 'moment'
+import { extendMoment } from 'moment-range'
+import { merge } from 'ramda'
 
-const moment = extendMoment(Moment);
+const moment = extendMoment(Moment)
 
 // const history = [
 //   { _id: "1518086701", text: "00:20:00", actor: 'bot', timer: true },
@@ -35,22 +36,22 @@ export default (formattedDuration, db) => {
     .then(docs => {
       const times = docs.rows
         .filter(({doc}) => doc.timer)
-        .map(({doc}) => {
-          doc.timer = moment.duration(doc.text).asSeconds()
-          return doc
-        })
+        .map(({doc}) => merge(doc, {seconds: moment.duration(doc.text).asSeconds()}))
         .reduce((chart, doc) => {
           const date = moment.unix(doc._id).format('YYYY-MM-DD').toString()
 
-          chart.longest = doc.timer > chart.longest ? doc.timer : chart.longest
+          chart.longest = doc.seconds > chart.longest ? doc.seconds : chart.longest
           chart.from = chart.from || date
           chart.to = date
-          chart.data[date] = doc.timer
+          chart.data[date] = doc.seconds
+          chart.total = chart.total + doc.seconds
 
           return chart
-        }, {longest: 0, data: {}})
+        }, {longest: 0, data: {}, total: 0})
 
-      const range = moment.range(times.from, times.to)
+      const { from, to, total } = times
+
+      const range = moment.range(from, to)
 
       const chart = Array.from(range.by('days'))
         .map(day => {
@@ -59,8 +60,8 @@ export default (formattedDuration, db) => {
           const time = Math.round(seconds / times.longest * 100)
           return { date, time }
         })
-
-      return { _id: moment().unix().toString(), chart, text: formattedDuration }
+console.log({ _id: moment().unix().toString(), chart, total, from, to, last: formattedDuration })
+      return { _id: moment().unix().toString(), chart, total, from, to, last: formattedDuration }
     })
     .catch(err => console.error(err))
 }
